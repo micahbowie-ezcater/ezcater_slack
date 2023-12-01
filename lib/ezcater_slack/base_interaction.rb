@@ -51,7 +51,7 @@ module EzcaterSlack
       @interaction_params = webhook_params
       @pattern = self.class.pattern_string
       @extracted_values = {}
-      extract_values(@pattern)
+      extract_values(slack_message_text)
     end
 
     def call
