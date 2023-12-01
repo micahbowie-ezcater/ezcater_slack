@@ -54,6 +54,10 @@ module EzcaterSlack
       @markdown_block = markdown.nil? ? block : Proc.new {|x| markdown  }
     end
 
+    # def list_section(&block)
+    #   @markdown_block = markdown.nil? ? block : Proc.new {|x| markdown  }
+    # end
+
     def environment(env)
       @environment = env
     end

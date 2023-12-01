@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'active_support'
+require 'active_support/all'
 require 'csv'
 require_relative 'concerns/slack_interaction_params'
 
@@ -30,11 +30,11 @@ module EzcaterSlack
           return
         end
 
-        if options[:only] && options.is_a?(Array)
+        if options[:only] && options.is_a?(Hash)
           @interaction_config[:only] += Array(options[:only])
         end
 
-        if options[:except] && options.is_a?(Array)
+        if options[:except] && options.is_a?(Hash)
           @interaction_config[:except] += Array(options[:except])
         end
       end
@@ -47,7 +47,7 @@ module EzcaterSlack
 
     def call
       unless can_interact?
-        message_not_permitted
+        send_message('You are not authorized to interact with this command or interaction is in an invalid channel.')
         return
       end
       execute
@@ -74,7 +74,7 @@ module EzcaterSlack
       return true if all_conditions.empty? && only_conditions.empty? && except_conditions.empty?
       return true if all_conditions.include?(:all)
       return true if only_conditions.include?(slack_user_name)
-      return true if except_conditions.exclude?(slack_user_name)
+      return false if except_conditions.include?(slack_user_name)
 
       false
     end
