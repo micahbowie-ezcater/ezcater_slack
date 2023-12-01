@@ -7,9 +7,10 @@ require_relative 'concerns/slack_interaction_params'
 module EzcaterSlack
   class BaseInteraction
     include ::SlackInteractionParams
+    include ::SlackPatternInteraction
 
     class << self
-      attr_reader :interaction_config, :interaction_channels
+      attr_reader :interaction_config, :interaction_channels, :pattern_string
 
       # EXAMPLE
       #
@@ -17,6 +18,10 @@ module EzcaterSlack
       def interaction_options(options = {})
         set_interaction_config(options[:can_interact])
         @interaction_channels = options[:channels].empty? ? :all : options[:channels]
+      end
+
+      def interaction_pattern(pattern_string)
+        @pattern_string = pattern_string
       end
 
       private
@@ -43,6 +48,9 @@ module EzcaterSlack
     attr_reader :interaction_params
     def initialize(webhook_params = {})
       @interaction_params = webhook_params
+      @pattern = self.class.pattern_string
+      @extracted_values = {}
+      extract_values(@pattern)
     end
 
     def call
@@ -89,6 +97,7 @@ module EzcaterSlack
       return true if interaction_channels == :direct_message && direct_message?
       return false if interaction_channels == :direct_message && !direct_message?
       return false unless interaction_channels.is_a?(Array)
+      return true if direct_message? && interaction_channels.include?(:direct_message)
       return true if interaction_channels.include?(slack_channel_name)
 
       false
