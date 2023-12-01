@@ -3,6 +3,7 @@
 require 'active_support/all'
 require 'csv'
 require_relative 'concerns/slack_interaction_params'
+require_relative 'concerns/slack_pattern_interaction'
 
 module EzcaterSlack
   class BaseInteraction
@@ -20,8 +21,8 @@ module EzcaterSlack
         @interaction_channels = options[:channels].empty? ? :all : options[:channels]
       end
 
-      def interaction_pattern(pattern_string)
-        @pattern_string = pattern_string
+      def interaction_pattern(pattern_string = '')
+        @pattern_string = pattern_string.strip.squeeze
       end
 
       private
