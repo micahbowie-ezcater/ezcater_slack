@@ -1,0 +1,24 @@
+# frozen_string_literal: true
+
+module EzcaterSlack
+  class Message
+    class Compilation
+      attr_reader :payload, :csv_message, :csv_data
+      def initialize(payload, csv_message = false, csv_data = {})
+        @payload = payload
+        @csv_message = csv_message
+        @csv_data = csv_data
+      end
+
+      def blocks
+        payload[:blocks]&.to_json
+      end
+
+      def channel
+        payload[:channel].first
+      end
+
+      alias csv? csv_message
+    end
+  end
+end
