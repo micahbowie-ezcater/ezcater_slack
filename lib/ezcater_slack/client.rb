@@ -3,6 +3,7 @@
 require 'slack-ruby-client'
 require_relative 'configuration'
 require_relative 'message'
+require_relative 'message_stop_guard'
 
 module EzcaterSlack
   class Client
@@ -52,9 +53,10 @@ module EzcaterSlack
       end
 
       def send_message(message, channel)
+        scrubbed = ::EzcaterSlack::MessageStopGuard.scrubber.call(message)
         web_client.chat_postMessage(
           channel: channel,
-          blocks: [{ type: 'rich_text', elements: [ type: 'rich_text_section', elements: [ { type: 'text', text: message } ] ] }],
+          blocks: [{ type: 'rich_text', elements: [ type: 'rich_text_section', elements: [ { type: 'text', text: scrubbed } ] ] }],
           as_user: true,
         )
         return "Message sent by: EzcaterSlack::Client"

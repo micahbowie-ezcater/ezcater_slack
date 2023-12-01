@@ -3,6 +3,7 @@
 require 'csv'
 require 'slack-ruby-client'
 require_relative './message/compilation'
+require_relative 'message_stop_guard'
 
 module EzcaterSlack
   class Message
@@ -35,6 +36,7 @@ module EzcaterSlack
       @channels = []
       @tagged_users = []
       @csv_data_block = []
+      @list_items = []
     end
 
     def template(name, &block)
@@ -54,9 +56,13 @@ module EzcaterSlack
       @markdown_block = markdown.nil? ? block : Proc.new {|x| markdown  }
     end
 
-    # def list_section(&block)
-    #   @markdown_block = markdown.nil? ? block : Proc.new {|x| markdown  }
-    # end
+    def list_section(&block)
+      @list_block = block
+    end
+
+    def list_item(item)
+      @list_items << item
+    end
 
     def environment(env)
       @environment = env
@@ -81,6 +87,7 @@ module EzcaterSlack
       construct_title_block(args) if @title_block
       construct_text_block(args) if @text_block
       construct_markdown_block(args) if @markdown_block
+      construct_list_block(args) if @list_block
       construct_csv(args) if @include_csv_data
       add_user_mentions if @tagged_users.any?
 
@@ -98,28 +105,54 @@ module EzcaterSlack
 
     def reset_message_blocks
       @blocks = []
+      @list_items = []
     end
 
     private
 
     def construct_environment_block
       env = @environment.upcase
-      add_block(type: 'section', text: { type: 'mrkdwn', text: "Environment: [#{env}] \n" })
+      scrubbed = ::EzcaterSlack::MessageStopGuard.scrubber.call(env)
+      add_block(type: 'section', text: { type: 'mrkdwn', text: "Environment: [#{scrubbed}] \n" })
     end
 
     def construct_title_block(args)
       text_content = @title_block.call(args)
-      add_block(type: 'header', text: { type: 'plain_text', text: text_content })
+      scrubbed = ::EzcaterSlack::MessageStopGuard.scrubber.call(text_content)
+      add_block(type: 'header', text: { type: 'plain_text', text: scrubbed })
     end
 
     def construct_text_block(args)
       text_content = @text_block.call(args)
-      add_block(type: 'rich_text', elements: [ type: 'rich_text_section', elements: [ { type: 'text', text: text_content } ] ])
+      scrubbed = ::EzcaterSlack::MessageStopGuard.scrubber.call(text_content)
+      add_block(type: 'rich_text', elements: [ type: 'rich_text_section', elements: [ { type: 'text', text: scrubbed } ] ])
     end
 
     def construct_markdown_block(args)
       markdown_content = @markdown_block.call(args)
-      add_block(type: 'section', text: { type: 'mrkdwn', text: "```#{markdown_content}```" })
+      scrubbed = MessageStopGuard.scrubber.call(markdown_content)
+      add_block(type: 'section', text: { type: 'mrkdwn', text: "```#{scrubbed}```" })
+    end
+
+    def construct_list_block(args)
+      @list_block.call(args)
+      list_elements_content = construct_list_items_block
+      add_block(type: 'rich_text', elements: [{ type: "rich_text_list", style: "bullet", elements: list_elements_content }])
+    end
+
+    def construct_list_items_block
+      @list_items.map do |list_item|
+        scrubbed = ::EzcaterSlack::MessageStopGuard.scrubber.call(list_item)
+        {
+          "type": "rich_text_section",
+          "elements": [
+            {
+              "type": "text",
+              "text": scrubbed
+            },
+          ]
+        }
+      end
     end
 
     def add_user_mentions

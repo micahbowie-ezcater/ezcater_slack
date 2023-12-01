@@ -4,6 +4,7 @@ require 'active_support'
 require 'active_support/all'
 
 require_relative "ezcater_slack/configuration"
+require_relative "ezcater_slack/message_stop_guard"
 require_relative "ezcater_slack/client"
 require_relative "ezcater_slack/message/compilation"
 require_relative "ezcater_slack/message"
