@@ -111,7 +111,7 @@ module EzcaterSlack
     end
 
     def send_message_with_template(template, args)
-      ::EzcaterSlack::Client.send_message_with_template(template_name, args.merge(channel: slack_channel_id))
+      ::EzcaterSlack::Client.send_message_with_template(template, args.merge(channel: slack_channel_id))
     end
   end
 end
