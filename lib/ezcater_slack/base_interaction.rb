@@ -87,6 +87,8 @@ module EzcaterSlack
 
       return true if interaction_channels == :all
       return true if interaction_channels == :direct_message && direct_message?
+      return false if interaction_channels == :direct_message && !direct_message?
+      return false unless interaction_channels.is_a?(Array)
       return true if interaction_channels.include?(slack_channel_name)
 
       false
