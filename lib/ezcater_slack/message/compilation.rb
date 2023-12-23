@@ -15,7 +15,11 @@ module EzcaterSlack
       end
 
       def channel
-        payload[:channel].first
+        if payload[:channel].is_a?(Array)
+          payload[:channel].first
+        elsif payload[:channel].is_a?(String)
+          payload[:channel]
+        end
       end
 
       alias csv? csv_message

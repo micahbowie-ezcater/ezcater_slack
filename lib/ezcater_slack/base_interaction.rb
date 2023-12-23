@@ -1,15 +1,17 @@
 # frozen_string_literal: true
 
-require 'active_support'
+require 'active_support/all'
 require 'csv'
 require_relative 'concerns/slack_interaction_params'
+require_relative 'concerns/slack_pattern_interaction'
 
 module EzcaterSlack
   class BaseInteraction
     include ::SlackInteractionParams
+    include ::SlackPatternInteraction
 
     class << self
-      attr_reader :interaction_config, :interaction_channels
+      attr_reader :interaction_config, :interaction_channels, :pattern_string
 
       # EXAMPLE
       #
@@ -17,6 +19,10 @@ module EzcaterSlack
       def interaction_options(options = {})
         set_interaction_config(options[:can_interact])
         @interaction_channels = options[:channels].empty? ? :all : options[:channels]
+      end
+
+      def interaction_pattern(pattern_string = '')
+        @pattern_string = pattern_string.strip.squeeze
       end
 
       private
@@ -30,11 +36,11 @@ module EzcaterSlack
           return
         end
 
-        if options[:only] && options.is_a?(Array)
+        if options[:only] && options.is_a?(Hash)
           @interaction_config[:only] += Array(options[:only])
         end
 
-        if options[:except] && options.is_a?(Array)
+        if options[:except] && options.is_a?(Hash)
           @interaction_config[:except] += Array(options[:except])
         end
       end
@@ -43,11 +49,14 @@ module EzcaterSlack
     attr_reader :interaction_params
     def initialize(webhook_params = {})
       @interaction_params = webhook_params
+      @pattern = self.class.pattern_string
+      @extracted_values = {}
+      extract_values(slack_message_text)
     end
 
     def call
       unless can_interact?
-        message_not_permitted
+        send_message('You are not authorized to interact with this command or interaction is in an invalid channel.')
         return
       end
       execute
@@ -74,7 +83,7 @@ module EzcaterSlack
       return true if all_conditions.empty? && only_conditions.empty? && except_conditions.empty?
       return true if all_conditions.include?(:all)
       return true if only_conditions.include?(slack_user_name)
-      return true if except_conditions.exclude?(slack_user_name)
+      return false if except_conditions.include?(slack_user_name)
 
       false
     end
@@ -87,6 +96,9 @@ module EzcaterSlack
 
       return true if interaction_channels == :all
       return true if interaction_channels == :direct_message && direct_message?
+      return false if interaction_channels == :direct_message && !direct_message?
+      return false unless interaction_channels.is_a?(Array)
+      return true if direct_message? && interaction_channels.include?(:direct_message)
       return true if interaction_channels.include?(slack_channel_name)
 
       false
@@ -111,7 +123,7 @@ module EzcaterSlack
     end
 
     def send_message_with_template(template, args)
-      ::EzcaterSlack::Client.send_message_with_template(template_name, args.merge(channel: slack_channel_id))
+      ::EzcaterSlack::Client.send_message_with_template(template, args.merge(channel: slack_channel_id))
     end
   end
 end
